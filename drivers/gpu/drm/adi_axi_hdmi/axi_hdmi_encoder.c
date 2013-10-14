@@ -38,6 +38,8 @@
 #define AXI_HDMI_CTRL_ENABLE		BIT(0)
 #define AXI_HDMI_CTRL_CSC_BYPASS	BIT(1)
 #define AXI_HDMI_CTRL_TPG_ENABLE	BIT(2)
+#define AXI_HDMI_CTRL_CRCB_INIT		BIT(3)
+#define AXI_HDMI_CTRL_PACKED_422	BIT(4)
 
 #define AXI_HDMI_STATUS_VMDA_UNDERFLOW	BIT(4)
 #define AXI_HDMI_STATUS_VMDA_OVERFLOW	BIT(3)
@@ -125,6 +127,7 @@ enum axi_hdmi_debug_mode {
 	AXI_HDMI_MODE_NORMAL,
 	AXI_HDMI_MODE_TESTPATTERN,
 	AXI_HDMI_MODE_COLORPATTERN,
+	AXI_HDMI_MODE_PACKED_422,
 	AXI_HDMI_MODE_CSC_BYPASS,
 };
 
@@ -132,6 +135,7 @@ static const char * const axi_hdmi_mode_text[] = {
 	[AXI_HDMI_MODE_NORMAL] = "normal",
 	[AXI_HDMI_MODE_TESTPATTERN] = "testpattern",
 	[AXI_HDMI_MODE_COLORPATTERN] = "colorpattern",
+	[AXI_HDMI_MODE_PACKED_422] = "packed422",
 	[AXI_HDMI_MODE_CSC_BYPASS] = "cscbypass"
 };
 
@@ -153,6 +157,8 @@ static ssize_t axi_hdmi_read_mode(struct file *file, char __user *userbuf,
 		current_mode = AXI_HDMI_MODE_COLORPATTERN;
 	else if (ctrl & AXI_HDMI_CTRL_TPG_ENABLE)
 		current_mode = AXI_HDMI_MODE_TESTPATTERN;
+	else if (ctrl & AXI_HDMI_CTRL_PACKED_422)
+		current_mode = AXI_HDMI_MODE_PACKED_422;
 	else if (ctrl & AXI_HDMI_CTRL_CSC_BYPASS)
 		current_mode = AXI_HDMI_MODE_CSC_BYPASS;
 	else
@@ -196,7 +202,7 @@ static ssize_t axi_hdmi_set_mode(struct file *file, const char __user *userbuf,
 	cp = ioread32(private->base + AXI_HDMI_REG_COLOR_PATTERN);
 
 	cp &= ~AXI_HDMI_COLOR_PATTERN_ENABLE;
-	ctrl &= ~(AXI_HDMI_CTRL_CSC_BYPASS | AXI_HDMI_CTRL_TPG_ENABLE);
+	ctrl &= ~(AXI_HDMI_CTRL_PACKED_422 | AXI_HDMI_CTRL_CSC_BYPASS | AXI_HDMI_CTRL_TPG_ENABLE);
 
 	switch (i) {
 	case AXI_HDMI_MODE_NORMAL:
@@ -207,6 +213,9 @@ static ssize_t axi_hdmi_set_mode(struct file *file, const char __user *userbuf,
 	case AXI_HDMI_MODE_COLORPATTERN:
 		cp |= AXI_HDMI_COLOR_PATTERN_ENABLE;
 		break;
+	case AXI_HDMI_MODE_PACKED_422:
+		ctrl |= AXI_HDMI_CTRL_PACKED_422;
+		/* fallthru */
 	case AXI_HDMI_MODE_CSC_BYPASS:
 		ctrl |= AXI_HDMI_CTRL_CSC_BYPASS;
 		break;
