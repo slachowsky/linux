@@ -261,12 +261,16 @@ static void axi_hdmi_encoder_dpms(struct drm_encoder *encoder, int mode)
 	struct drm_connector *connector = &axi_hdmi_encoder->connector;
 	struct axi_hdmi_private *private = encoder->dev->dev_private;
 	struct drm_encoder_slave_funcs *sfuncs = get_slave_funcs(encoder);
+	uint32_t ctrl = AXI_HDMI_CTRL_ENABLE;
 	struct adv7511_video_config config;
 	struct edid *edid;
 
 	switch (mode) {
 	case DRM_MODE_DPMS_ON:
-		iowrite32(AXI_HDMI_CTRL_ENABLE, private->base + AXI_HDMI_REG_CTRL);
+		if (encoder->crtc->fb->bits_per_pixel == 16) {
+			ctrl |= AXI_HDMI_CTRL_PACKED_422 | AXI_HDMI_CTRL_CSC_BYPASS;
+		}
+		iowrite32(ctrl, private->base + AXI_HDMI_REG_CTRL);
 		edid = adv7511_get_edid(encoder);
 		if (edid) {
 			config.hdmi_mode = drm_detect_hdmi_monitor(edid);
