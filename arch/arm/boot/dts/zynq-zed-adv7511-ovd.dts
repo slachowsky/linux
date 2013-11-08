@@ -1,0 +1,20 @@
+/dts-v1/;
+
+/include/ "zynq-zed-adv7511.dtsi"
+
+/ {
+	fpga-axi@1 {
+		compatible = "simple-bus";
+		#address-cells = <0x1>;
+		#size-cells = <0x1>;
+		ranges;
+
+		axi_ovd_0: axi_ovd@7de00000 {
+			compatible = "ovics,ovd-1.00.a";
+			reg = <0x7de00000 0x100>;
+			interrupts = <0 35 4>;
+			interrupt-parent = <&gic>;
+			clocks = <&clkc 18>;
+		};
+	};
+};
