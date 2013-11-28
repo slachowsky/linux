@@ -54,6 +54,50 @@ static void axi_hdmi_mode_config_init(struct drm_device *dev)
 	dev->mode_config.funcs = &axi_hdmi_mode_config_funcs;
 }
 
+/* FIXME - these would be in a header */
+
+struct drm_adi_gem_info {
+	uint32_t handle;		/* buffer handle (in) */
+	uint32_t pad;
+	uint64_t paddr;			/* physical address (out) */
+	uint32_t size;			/* virtual size for mmap'ing (out) */
+	uint32_t __pad;
+};
+
+#define DRM_ADI_GEM_INFO		0x00
+#define DRM_ADI_NUM_IOCTLS		0x01
+
+#define DRM_IOCTL_ADI_GEM_INFO		DRM_IOWR(DRM_COMMAND_BASE + DRM_ADI_GEM_INFO, struct drm_adi_gem_info)
+
+/* FIXME - end header */
+
+static int ioctl_gem_info(struct drm_device *dev, void *data,
+		struct drm_file *file_priv)
+{
+	struct drm_adi_gem_info *args = data;
+	struct drm_gem_object *obj;
+	struct drm_gem_cma_object *cma_obj;
+	int ret = 0;
+
+	//VERB("%p:%p: handle=%d", dev, file_priv, args->handle);
+
+	obj = drm_gem_object_lookup(dev, file_priv, args->handle);
+	if (!obj)
+		return -ENOENT;
+	cma_obj = to_drm_gem_cma_obj(obj);
+
+	args->paddr = cma_obj->paddr;
+	args->size = obj->size;
+
+	drm_gem_object_unreference_unlocked(obj);
+
+	return ret;
+}
+
+static struct drm_ioctl_desc ioctls[DRM_COMMAND_END - DRM_COMMAND_BASE] = {
+	DRM_IOCTL_DEF_DRV(ADI_GEM_INFO, ioctl_gem_info, DRM_UNLOCKED|DRM_AUTH),
+};
+
 static int axi_hdmi_load(struct drm_device *dev, unsigned long flags)
 {
 	struct axi_hdmi_private *private = dev_get_drvdata(dev->dev);
@@ -133,6 +177,8 @@ static struct drm_driver axi_hdmi_driver = {
 	.dumb_create		= drm_gem_cma_dumb_create,
 	.dumb_map_offset	= drm_gem_cma_dumb_map_offset,
 	.dumb_destroy		= drm_gem_cma_dumb_destroy,
+	.ioctls			= ioctls,
+	.num_ioctls		= DRM_ADI_NUM_IOCTLS,
 	.fops			= &axi_hdmi_driver_fops,
 	.name			= DRIVER_NAME,
 	.desc			= DRIVER_DESC,
