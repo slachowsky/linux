@@ -135,6 +135,8 @@ static int ioctl_next_frame(struct drm_device *dev, void *data,
 	chan->addr_regs->buf_addr[2] = cma_obj->paddr;
 	chan->addr_regs->vsize = 1080;
 
+	drm_gem_object_unreference_unlocked(obj);
+
 	return 0;
 }
 
