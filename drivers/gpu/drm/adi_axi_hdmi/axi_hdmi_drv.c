@@ -65,9 +65,11 @@ struct drm_adi_gem_info {
 };
 
 #define DRM_ADI_GEM_INFO		0x00
-#define DRM_ADI_NUM_IOCTLS		0x01
+#define DRM_ADI_NEXT_FRAME		0x01
+#define DRM_ADI_NUM_IOCTLS		0x02
 
 #define DRM_IOCTL_ADI_GEM_INFO		DRM_IOWR(DRM_COMMAND_BASE + DRM_ADI_GEM_INFO, struct drm_adi_gem_info)
+#define DRM_IOCTL_ADI_NEXT_FRAME	DRM_IOWR(DRM_COMMAND_BASE + DRM_ADI_NEXT_FRAME, uint32_t)
 
 /* FIXME - end header */
 
@@ -94,8 +96,51 @@ static int ioctl_gem_info(struct drm_device *dev, void *data,
 	return ret;
 }
 
+struct vdma_addr_regs {
+	u32 vsize;          /* 0x0 Vertical size */
+	u32 hsize;          /* 0x4 Horizontal size */
+	u32 frmdly_stride;  /* 0x8 Frame delay and stride */
+	u32 buf_addr[16];   /* 0xC - 0x48 Src addresses */
+};
+
+/* Per DMA specific operations should be embedded in the channel structure
+ */
+struct xilinx_dma_chan {
+	void *regs;   /* Control status registers */
+	struct vdma_addr_regs *addr_regs; /* Direct address registers */
+	spinlock_t lock;                  /* Descriptor operation lock */
+	struct list_head active_list;	  /* Active descriptors */
+	struct list_head pending_list;	  /* Descriptors waiting */
+	struct list_head removed_list;       /* Descriptors queued for removal */
+	struct dma_chan common;           /* DMA common channel */
+};
+
+static int ioctl_next_frame(struct drm_device *dev, void *data,
+		struct drm_file *file_priv)
+{
+	struct axi_hdmi_private *p = dev->dev_private;
+	struct xilinx_dma_chan *chan = container_of(p->dma, struct xilinx_dma_chan, common);
+	uint32_t handle = *(uint32_t*)data;
+	struct drm_gem_object *obj;
+	struct drm_gem_cma_object *cma_obj;
+
+	obj = drm_gem_object_lookup(dev, file_priv, handle);
+	if (!obj)
+		return -ENOENT;
+	cma_obj = to_drm_gem_cma_obj(obj);
+
+	/* HACK - set new addresses latched on next frame */
+	chan->addr_regs->buf_addr[0] = cma_obj->paddr;
+	chan->addr_regs->buf_addr[1] = cma_obj->paddr;
+	chan->addr_regs->buf_addr[2] = cma_obj->paddr;
+	chan->addr_regs->vsize = 1080;
+
+	return 0;
+}
+
 static struct drm_ioctl_desc ioctls[DRM_COMMAND_END - DRM_COMMAND_BASE] = {
 	DRM_IOCTL_DEF_DRV(ADI_GEM_INFO, ioctl_gem_info, DRM_UNLOCKED|DRM_AUTH),
+	DRM_IOCTL_DEF_DRV(ADI_NEXT_FRAME, ioctl_next_frame, DRM_UNLOCKED|DRM_AUTH),
 };
 
 static int axi_hdmi_load(struct drm_device *dev, unsigned long flags)
