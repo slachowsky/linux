@@ -152,4 +152,41 @@
 			gpios = <&gpio 80 0>;
 		};
 	};
+
+	gpio_keys {
+		compatible = "gpio-keys";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		autorepeat;
+
+		btnc {
+			label = "Centre";
+			linux,code = <0x160>; // Ok
+			gpios = <&gpio 54 0>;
+		};
+
+		btnd {
+			label = "Down";
+			linux,code = <108>; // Down
+			gpios = <&gpio 55 0>;
+		};
+
+		btnl {
+			label = "Left";
+			linux,code = <105>; // Left
+			gpios = <&gpio 56 0>;
+		};
+
+		btnr {
+			label = "Right";
+			linux,code = <106>; // Right
+			gpios = <&gpio 57 0>;
+		};
+
+		btnu {
+			label = "up";
+			linux,code = <103>; // Up
+			gpios = <&gpio 58 0>;
+		};
+	};
 };
